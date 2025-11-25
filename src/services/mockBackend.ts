@@ -2,26 +2,44 @@
 // If the backend is not available, some functions will fallback to localStorage to keep the app usable.
 
 // Use Vite env if provided; keep TS happy by casting import.meta to any
-// Default to localhost backend during local development when VITE_API_BASE is not set.
-// In production you should set VITE_API_BASE to your backend URL.
-const API_BASE = (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_BASE : '') || 'http://localhost:4000';
+// Resolve API base order:
+// 1. If VITE_API_BASE is set, use that.
+// 2. Try relative `/api` (works when backend is proxied or served from same origin).
+// 3. Fallback to http://localhost:4000 for local development.
+const ENV_API_BASE = (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_BASE : '') || '';
+const FALLBACK_LOCAL = 'http://localhost:4000';
 
 async function safeFetch(path: string, opts: RequestInit = {}) {
-	const url = `${API_BASE}/api${path}`;
-	try {
-		const res = await fetch(url, {
-			headers: { 'Content-Type': 'application/json' },
-			...opts,
-		});
-		if (!res.ok) {
-			const text = await res.text();
-			throw new Error(text || res.statusText || 'Request failed');
+	const candidates: string[] = [];
+	if (ENV_API_BASE) candidates.push(`${ENV_API_BASE}/api`);
+	// try relative first so deployed builds that serve API under same origin work
+	candidates.push('');
+	candidates.push(`${FALLBACK_LOCAL}/api`);
+
+	let lastErr: any = null;
+	for (const base of candidates) {
+		const url = base ? `${base}${path}` : `/api${path}`;
+		try {
+			const res = await fetch(url, {
+				headers: { 'Content-Type': 'application/json' },
+				...opts,
+			});
+			if (!res.ok) {
+				const text = await res.text();
+				// Return structured error to caller
+				throw new Error(text || res.statusText || `Request failed: ${res.status}`);
+			}
+			return await res.json();
+		} catch (err) {
+			// If it's a network error (connection refused), try next candidate.
+			lastErr = err;
+			// small delay for transient errors when trying next candidate
+			await new Promise((r) => setTimeout(r, 150));
+			continue;
 		}
-		return await res.json();
-	} catch (e) {
-		// Re-throw for now, frontend will handle errors
-		throw e;
 	}
+	// After trying all candidates, throw the last error so UI can show a friendly message
+	throw lastErr || new Error('Network request failed');
 }
 
 export async function getStudents() {
