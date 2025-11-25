@@ -23,12 +23,12 @@ const Register: React.FC = () => {
     branch: Branch.CSE,
     photoUrl: '',
     participationInterests: [] as string[],
-    feeAmount: '500' // Default
+    feeAmount: 'FREE' // Default
   });
 
   useEffect(() => {
-    if (formData.year === Year.FIRST || formData.year === Year.FOURTH) {
-      setFormData(prev => ({ ...prev, feeAmount: '500' }));
+    if (formData.year === Year.FIRST) {
+      setFormData(prev => ({ ...prev, feeAmount: 'FREE' }));
     } else {
       setFormData(prev => ({ ...prev, feeAmount: '' }));
     }

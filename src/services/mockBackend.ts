@@ -24,11 +24,19 @@ async function safeFetch(path: string, opts: RequestInit = {}) {
 				headers: { 'Content-Type': 'application/json' },
 				...opts,
 			});
-			if (!res.ok) {
-				const text = await res.text();
-				// Return structured error to caller
-				throw new Error(text || res.statusText || `Request failed: ${res.status}`);
-			}
+				if (!res.ok) {
+					// If this was the relative `/api` attempt and it returned a client error (like 404),
+					// it often means the dev server isn't proxying /api — try the next candidate instead
+					if (base === '' && res.status >= 400 && res.status < 500) {
+						lastErr = new Error(`Candidate ${url} returned ${res.status}`);
+						// try next candidate
+						await new Promise((r) => setTimeout(r, 100));
+						continue;
+					}
+					const text = await res.text();
+					// Return structured error to caller for non-recoverable responses
+					throw new Error(text || res.statusText || `Request failed: ${res.status}`);
+				}
 			return await res.json();
 		} catch (err) {
 			// If it's a network error (connection refused), try next candidate.
