@@ -2,7 +2,9 @@
 // If the backend is not available, some functions will fallback to localStorage to keep the app usable.
 
 // Use Vite env if provided; keep TS happy by casting import.meta to any
-const API_BASE = (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_BASE : '') || '';
+// Default to localhost backend during local development when VITE_API_BASE is not set.
+// In production you should set VITE_API_BASE to your backend URL.
+const API_BASE = (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_BASE : '') || 'http://localhost:4000';
 
 async function safeFetch(path: string, opts: RequestInit = {}) {
 	const url = `${API_BASE}/api${path}`;
