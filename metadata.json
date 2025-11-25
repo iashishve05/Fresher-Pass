@@ -1,0 +1,7 @@
+{
+  "name": "Fest-2.3- Fresher's Party Registration",
+  "description": "A futuristic, glassmorphism-styled registration system for college fresher parties with QR-based ticketing and admin check-in.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
